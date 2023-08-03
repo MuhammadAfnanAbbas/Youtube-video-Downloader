@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>YouTube Video Downloader</title>
+    <meta name="description" content="Download YouTube videos easily with our online video downloader.">
+    <meta name="keywords" content="YouTube, video, downloader, download, online, free">
+    <meta name="author" content="Your Name">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        /* Reset some default styles ... */
+
+        /* Navbar styles ... */
+
+        /* Header styles ... */
+
+        /* Container styles ... */
+
+        /* Flash message styles ... */
+
+        /* Download section styles ... */
+
+        /* Footer styles ... */
+
+        /* Blog section styles ... */
+
+        /* Add improved styles, colors, and animations */
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f9f9f9;
+            margin: 0;
+            padding: 0;
+            color: #333;
+        }
+
+        .navbar {
+            background-color: #222;
+            overflow: hidden;
+        }
+
+        .navbar a {
+            float: left;
+            display: block;
+            color: white;
+            text-align: center;
+            padding: 14px 16px;
+            text-decoration: none;
+        }
+
+        .navbar a:hover {
+            background-color: #444;
+        }
+
+        .container {
+            margin: 50px auto;
+            max-width: 600px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            padding: 20px;
+        }
+
+        .flash {
+            margin-bottom: 20px;
+            padding: 10px;
+            border-radius: 5px;
+            font-weight: bold;
+            color: #fff;
+            text-align: center;
+        }
+
+        .flash.success {
+            background-color: #28a745;
+        }
+
+        .flash.error {
+            background-color: #dc3545;
+        }
+
+        .download-section {
+            text-align: center;
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f5f5f5;
+            border-radius: 5px;
+        }
+
+        .download-link {
+            color: #007bff;
+            text-decoration: none;
+        }
+
+        .blog-section {
+            margin-top: 40px;
+        }
+
+        .blog-post {
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+        }
+
+        /* Loader styles */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #3498db;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            animation: spin 2s linear infinite;
+            display: inline-block;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        /* Add button disabling and color change styles */
+        #downloadButton {
+            background-color: #007bff;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            padding: 10px 20px;
+            cursor: pointer;
+        }
+
+        #downloadButton:disabled {
+            background-color: #b0b0b0;
+            cursor: not-allowed;
+        }
+
+        @keyframes spin {
+            0% {
+                transform: rotate(0deg);
+            }
+
+            100% {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Navbar -->
+    <div class="navbar">
+        <a href="#">Home</a>
+        <a href="#">About</a>
+        <a href="#">Contact</a>
+    </div>
+
+    <!-- Header -->
+    <h1 style="text-align: center; padding: 20px; color: #222;">YouTube Video Downloader</h1>
+
+    <!-- Main content -->
+    <div class="container">
+        <form method="post" action="{{ url_for('index') }}">
+            <label for="video_url">Enter YouTube Video URL:</label>
+            <input type="url" id="video_url" name="video_url" required>
+            <button type="submit" id="downloadButton" disabled>
+                Download <span id="loader" class="loader" style="display: none;"></span>
+            </button>
+        </form>
+
+        {% with messages = get_flashed_messages() %}
+        <!-- Flash messages ... -->
+        {% endwith %}
+
+        <div class="download-section">
+            {% if filename %}
+            <p class="flash success">{{ download_completed_message }}</p>
+            <p><a href="{{ url_for('download_file', filename=filename) }}" class="download-link">Download your video</a>
+            </p>
+            {% endif %}
+        </div>
+
+        <!-- Blog section ... -->
+
+        <div class="blog-section">
+            <div class="blog-post">
+                <h2>How to Use the YouTube Video Downloader</h2>
+                <p>Follow these simple steps to download YouTube videos using our online video downloader:</p>
+                <ol>
+                    <li>Copy the URL of the YouTube video you want to download.</li>
+                    <li>Paste the URL in the input field above and click the "Download" button.</li>
+                    <li>Wait for the download to complete.</li>
+                    <li>Click the download link to save the video to your device.</li>
+                </ol>
+                <p>Start downloading your favorite videos now and enjoy offline viewing!</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <p>&copy; 2023 Your Company. All rights reserved.</p>
+        </div>
+    </footer>
+
+    <script>
+        // Enable the button when a link is entered
+        document.getElementById('video_url').addEventListener('input', function () {
+            const button = document.getElementById('downloadButton');
+            button.disabled = this.value === '';
+        });
+
+        // Show loader on form submission
+        document.getElementById('downloadButton').addEventListener('click', function () {
+            document.getElementById('loader').style.display = 'inline-block';
+        });
+    </script>
+</body>
+
+</html>
