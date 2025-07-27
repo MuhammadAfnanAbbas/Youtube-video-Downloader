@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>YouTube Video Downloader</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 2rem auto; }
+    header { text-align: center; margin-bottom: 1.5rem; }
+    #spinner { display: none; }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>YouTube Downloader</h1>
+    <p>Enter a YouTube link, pick quality, and download!</p>
+  </header>
+
+  <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." style="width:100%">
+  <button id="fetch">Fetch Formats</button>
+  <span id="spinner">⏳ Loading...</span>
+
+  <div id="chooser" style="margin-top:1rem; display:none;">
+    <label for="formats">Choose format:</label>
+    <select id="formats"></select>
+    <button id="dl">Download</button>
+  </div>
+
+  <script>
+    const fetchBtn   = document.getElementById('fetch');
+    const spinner    = document.getElementById('spinner');
+    const chooser    = document.getElementById('chooser');
+    const formatsSel = document.getElementById('formats');
+    let currentURL   = '';
+
+    fetchBtn.addEventListener('click', async () => {
+      const url = document.getElementById('url').value.trim();
+      if (!url) return alert('Please paste a YouTube URL');
+
+      spinner.style.display = 'inline';
+      chooser.style.display = 'none';
+      formatsSel.innerHTML = '';
+
+      try {
+        const res  = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        spinner.style.display = 'none';
+
+        if (data.error) {
+          return alert(data.error);
+        }
+        currentURL = url;
+
+        // Populate dropdown using the 'label' field your server is sending
+        data.formats.forEach(fmt => {
+          const opt = document.createElement('option');
+          opt.value = fmt.itag;
+
+          // use fmt.label (quality or audio‑only text), with an optional container suffix
+          const container = fmt.container ? ` / ${fmt.container}` : '';
+          opt.textContent = `${fmt.label}${container} (${fmt.size})`;
+
+          formatsSel.appendChild(opt);
+        });
+
+        chooser.style.display = 'block';
+      } catch (err) {
+        spinner.style.display = 'none';
+        console.error(err);
+        alert('Error fetching formats');
+      }
+    });
+
+    document.getElementById('dl').addEventListener('click', () => {
+      const itag = formatsSel.value;
+      if (!itag) return;
+      // trigger the browser download
+      window.location.href = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}`;
+    });
+  </script>
+</body>
+</html>
