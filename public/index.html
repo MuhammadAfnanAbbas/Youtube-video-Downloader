@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -74,6 +74,386 @@
       const itag = formatsSel.value;
       if (!itag) return;
       // trigger the browser download
+      window.location.href = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}`;
+    });
+  </script>
+</body>
+</html> -->
+<!-- 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000 -->
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Downloader</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: black;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      text-align: center;
+      background-color: #c0392b;  /* Red accent */
+      padding: 2rem;
+      color: white;
+      border-bottom: 2px solid #fff;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.5rem;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      color: black;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      background-color: #f8f8f8;  /* Light background for input */
+      color: black;
+    }
+
+    input[type="text"]:focus {
+      border: 1px solid #c0392b;  /* Red focus border */
+      outline: none;
+    }
+
+    button {
+      background-color: #c0392b;  /* Red button */
+      color: white;
+      padding: 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+      width: 100%;
+    }
+
+    button:hover {
+      background-color: #e74c3c;  /* Slightly lighter red on hover */
+    }
+
+    #spinner {
+      display: none;
+      font-size: 1.5rem;
+      color: #c0392b;  /* Red spinner */
+      animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #chooser {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      background-color: #f8f8f8;
+      color: black;
+    }
+
+    .error {
+      color: #e74c3c;  /* Red error message */
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>YouTube Video Downloader</h1>
+    <p>Enter a YouTube link, pick quality, and download!</p>
+  </header>
+
+  <div class="container">
+    <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+    <button id="fetch">Fetch Formats</button>
+    <span id="spinner">⏳</span>
+
+    <div id="chooser">
+      <label for="formats">Choose format:</label>
+      <select id="formats"></select>
+      <button id="dl">Download</button>
+    </div>
+
+    <div class="error" id="error"></div>
+  </div>
+
+  <script>
+    const fetchBtn   = document.getElementById('fetch');
+    const spinner    = document.getElementById('spinner');
+    const chooser    = document.getElementById('chooser');
+    const formatsSel = document.getElementById('formats');
+    const errorDiv   = document.getElementById('error');
+    let currentURL   = '';
+
+    fetchBtn.addEventListener('click', async () => {
+      const url = document.getElementById('url').value.trim();
+      if (!url) {
+        errorDiv.textContent = 'Please enter a YouTube URL';
+        return;
+      } else {
+        errorDiv.textContent = '';
+      }
+
+      spinner.style.display = 'inline';
+      chooser.style.display = 'none';
+      formatsSel.innerHTML = '';
+      errorDiv.textContent = '';
+
+      try {
+        const res  = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        spinner.style.display = 'none';
+
+        if (data.error) {
+          return errorDiv.textContent = data.error;
+        }
+        currentURL = url;
+
+        data.formats.forEach(fmt => {
+          const opt = document.createElement('option');
+          opt.value = fmt.itag;
+          const container = fmt.container ? ` / ${fmt.container}` : '';
+          opt.textContent = `${fmt.label}${container} (${fmt.size})`;
+          formatsSel.appendChild(opt);
+        });
+
+        chooser.style.display = 'block';
+      } catch (err) {
+        spinner.style.display = 'none';
+        console.error(err);
+        errorDiv.textContent = 'Error fetching formats. Please try again later.';
+      }
+    });
+
+    document.getElementById('dl').addEventListener('click', () => {
+      const itag = formatsSel.value;
+      if (!itag) return;
+      window.location.href = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}`;
+    });
+  </script>
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Downloader</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: black;
+      color: white;
+      margin: 0;
+      padding: 0;
+    }
+
+    header {
+      text-align: center;
+      background-color: #c0392b;  /* Red accent */
+      padding: 2rem;
+      color: white;
+      border-bottom: 2px solid #fff;
+    }
+
+    h1 {
+      margin: 0;
+      font-size: 2.5rem;
+    }
+
+    p {
+      font-size: 1.2rem;
+      margin-top: 1rem;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 600px;
+      margin: 2rem auto;
+      padding: 2rem;
+      background: white;
+      color: black;
+      border-radius: 10px;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+
+    /* Ensure the input field doesn't overlap */
+    input[type="text"] {
+      width: 100%;
+      padding: 1rem;
+      margin: 1rem 0;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      background-color: #f8f8f8;  /* Light background for input */
+      color: black;
+      box-sizing: border-box; /* Ensures padding doesn't cause overflow */
+    }
+
+    input[type="text"]:focus {
+      border: 1px solid #c0392b;  /* Red focus border */
+      outline: none;
+    }
+
+    button {
+      background-color: #c0392b;  /* Red button */
+      color: white;
+      padding: 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: 0.3s;
+      width: 100%;
+      margin-top: 1rem; /* Added margin to separate from dropdown */
+    }
+
+    button:hover {
+      background-color: #e74c3c;  /* Slightly lighter red on hover */
+    }
+
+    #spinner {
+      display: none;
+      font-size: 1.5rem;
+      color: #c0392b;  /* Red spinner */
+      animation: spin 1s infinite linear;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    #chooser {
+      display: none;
+      margin-top: 1rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 1rem;
+      font-size: 1rem;
+      border-radius: 5px;
+      border: 1px solid #ddd;
+      background-color: #f8f8f8;
+      color: black;
+      box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+    }
+
+    .error {
+      color: #e74c3c;  /* Red error message */
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <h1>YouTube Video Downloader</h1>
+    <p>Enter a YouTube link, pick quality, and download!</p>
+  </header>
+
+  <div class="container">
+    <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+    <button id="fetch">Fetch Formats</button>
+    <span id="spinner">⏳</span>
+
+    <div id="chooser">
+      <label for="formats">Choose format:</label>
+      <select id="formats"></select>
+      <button id="dl">Download</button>
+    </div>
+
+    <div class="error" id="error"></div>
+  </div>
+
+  <script>
+    const fetchBtn   = document.getElementById('fetch');
+    const spinner    = document.getElementById('spinner');
+    const chooser    = document.getElementById('chooser');
+    const formatsSel = document.getElementById('formats');
+    const errorDiv   = document.getElementById('error');
+    let currentURL   = '';
+
+    fetchBtn.addEventListener('click', async () => {
+      const url = document.getElementById('url').value.trim();
+      if (!url) {
+        errorDiv.textContent = 'Please enter a YouTube URL';
+        return;
+      } else {
+        errorDiv.textContent = '';
+      }
+
+      spinner.style.display = 'inline';
+      chooser.style.display = 'none';
+      formatsSel.innerHTML = '';
+      errorDiv.textContent = '';
+
+      try {
+        const res  = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        spinner.style.display = 'none';
+
+        if (data.error) {
+          return errorDiv.textContent = data.error;
+        }
+        currentURL = url;
+
+        data.formats.forEach(fmt => {
+          const opt = document.createElement('option');
+          opt.value = fmt.itag;
+          const container = fmt.container ? ` / ${fmt.container}` : '';
+          opt.textContent = `${fmt.label}${container} (${fmt.size})`;
+          formatsSel.appendChild(opt);
+        });
+
+        chooser.style.display = 'block';
+      } catch (err) {
+        spinner.style.display = 'none';
+        console.error(err);
+        errorDiv.textContent = 'Error fetching formats. Please try again later.';
+      }
+    });
+
+    document.getElementById('dl').addEventListener('click', () => {
+      const itag = formatsSel.value;
+      if (!itag) return;
       window.location.href = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}`;
     });
   </script>
