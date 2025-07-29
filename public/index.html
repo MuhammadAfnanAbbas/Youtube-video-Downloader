@@ -267,8 +267,7 @@
   </script>
 </body>
 </html> -->
-
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
@@ -312,7 +311,6 @@
       box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
     }
 
-    /* Ensure the input field doesn't overlap */
     input[type="text"] {
       width: 100%;
       padding: 1rem;
@@ -320,18 +318,18 @@
       font-size: 1rem;
       border-radius: 5px;
       border: 1px solid #ddd;
-      background-color: #f8f8f8;  /* Light background for input */
+      background-color: #f8f8f8;
       color: black;
-      box-sizing: border-box; /* Ensures padding doesn't cause overflow */
+      box-sizing: border-box;
     }
 
     input[type="text"]:focus {
-      border: 1px solid #c0392b;  /* Red focus border */
+      border: 1px solid #c0392b;
       outline: none;
     }
 
     button {
-      background-color: #c0392b;  /* Red button */
+      background-color: #c0392b;
       color: white;
       padding: 1rem;
       font-size: 1rem;
@@ -340,17 +338,22 @@
       cursor: pointer;
       transition: 0.3s;
       width: 100%;
-      margin-top: 1rem; /* Added margin to separate from dropdown */
+      margin-top: 1rem;
     }
 
     button:hover {
-      background-color: #e74c3c;  /* Slightly lighter red on hover */
+      background-color: #e74c3c;
+    }
+
+    button:disabled {
+      background-color: #bdc3c7;
+      cursor: not-allowed;
     }
 
     #spinner {
       display: none;
       font-size: 1.5rem;
-      color: #c0392b;  /* Red spinner */
+      color: #c0392b;
       animation: spin 1s infinite linear;
     }
 
@@ -372,13 +375,56 @@
       border: 1px solid #ddd;
       background-color: #f8f8f8;
       color: black;
-      box-sizing: border-box; /* Ensure padding doesn't cause overflow */
+      box-sizing: border-box;
     }
 
     .error {
-      color: #e74c3c;  /* Red error message */
+      color: #e74c3c;
       font-size: 1rem;
       margin-top: 1rem;
+    }
+
+    .success {
+      color: #27ae60;
+      font-size: 1rem;
+      margin-top: 1rem;
+    }
+
+    /* Download loader styles */
+    #download-loader {
+      display: none;
+      margin-top: 1rem;
+      text-align: center;
+    }
+
+    #download-loader p {
+      font-size: 1.2rem;
+      margin: 0.5rem 0;
+    }
+
+    .progress-container {
+      background: #eee;
+      border-radius: 10px;
+      overflow: hidden;
+      margin: 1rem 0;
+    }
+
+    #progress-bar {
+      height: 25px;
+      width: 0%;
+      background: linear-gradient(90deg, #c0392b, #e74c3c);
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 0.9rem;
+    }
+
+    #status-message {
+      font-size: 1rem;
+      margin-top: 0.5rem;
     }
   </style>
 </head>
@@ -400,39 +446,71 @@
       <button id="dl">Download</button>
     </div>
 
+    <div id="download-loader">
+      <p>Status: <span id="status-message">Preparing download...</span></p>
+      <div class="progress-container">
+        <div id="progress-bar">0%</div>
+      </div>
+    </div>
+
     <div class="error" id="error"></div>
+    <div class="success" id="success"></div>
   </div>
 
   <script>
-    const fetchBtn   = document.getElementById('fetch');
-    const spinner    = document.getElementById('spinner');
-    const chooser    = document.getElementById('chooser');
+    const fetchBtn = document.getElementById('fetch');
+    const spinner = document.getElementById('spinner');
+    const chooser = document.getElementById('chooser');
     const formatsSel = document.getElementById('formats');
-    const errorDiv   = document.getElementById('error');
-    let currentURL   = '';
+    const errorDiv = document.getElementById('error');
+    const successDiv = document.getElementById('success');
+    const loader = document.getElementById('download-loader');
+    const statusMessage = document.getElementById('status-message');
+    const progressBar = document.getElementById('progress-bar');
+    const dlBtn = document.getElementById('dl');
+    let currentURL = '';
+    let currentEventSource = null;
+
+    // Helper function to clear messages
+    function clearMessages() {
+      errorDiv.textContent = '';
+      successDiv.textContent = '';
+    }
+
+    // Helper function to show error
+    function showError(message) {
+      errorDiv.textContent = message;
+      successDiv.textContent = '';
+    }
+
+    // Helper function to show success
+    function showSuccess(message) {
+      successDiv.textContent = message;
+      errorDiv.textContent = '';
+    }
 
     fetchBtn.addEventListener('click', async () => {
       const url = document.getElementById('url').value.trim();
       if (!url) {
-        errorDiv.textContent = 'Please enter a YouTube URL';
+        showError('Please enter a YouTube URL');
         return;
-      } else {
-        errorDiv.textContent = '';
       }
-
+      
+      clearMessages();
       spinner.style.display = 'inline';
       chooser.style.display = 'none';
+      loader.style.display = 'none';
       formatsSel.innerHTML = '';
-      errorDiv.textContent = '';
 
       try {
-        const res  = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
+        const res = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
         const data = await res.json();
         spinner.style.display = 'none';
 
         if (data.error) {
-          return errorDiv.textContent = data.error;
+          return showError(data.error);
         }
+        
         currentURL = url;
 
         data.formats.forEach(fmt => {
@@ -444,17 +522,1004 @@
         });
 
         chooser.style.display = 'block';
+        showSuccess(`Found ${data.formats.length} available formats for: ${data.title}`);
       } catch (err) {
         spinner.style.display = 'none';
-        console.error(err);
-        errorDiv.textContent = 'Error fetching formats. Please try again later.';
+        console.error('Fetch error:', err);
+        showError('Error fetching formats. Please check your connection and try again.');
       }
     });
 
-    document.getElementById('dl').addEventListener('click', () => {
+    dlBtn.addEventListener('click', () => {
       const itag = formatsSel.value;
-      if (!itag) return;
-      window.location.href = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}`;
+      if (!itag || !currentURL) {
+        showError('Please select a format first');
+        return;
+      }
+
+      // Generate unique session ID
+      const sessionId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      
+      // Reset UI
+      clearMessages();
+      loader.style.display = 'block';
+      dlBtn.disabled = true;
+      statusMessage.textContent = 'Connecting...';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+
+      // Close any existing event source
+      if (currentEventSource) {
+        currentEventSource.close();
+      }
+
+      // Start progress tracking first
+      currentEventSource = new EventSource(`/api/progress/${sessionId}`);
+      
+      let downloadStarted = false;
+      
+      currentEventSource.onopen = () => {
+        statusMessage.textContent = 'Connected - preparing download...';
+      };
+
+      currentEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const progress = data.progress || 0;
+          const status = data.status || 'downloading';
+
+          console.log('Progress update:', data); // Debug log
+
+          // Start download when we get the first connected message
+          if (!downloadStarted && (status === 'connected' || status === 'preparing')) {
+            downloadStarted = true;
+            statusMessage.textContent = 'Initiating download...';
+            
+            // Start the actual download with a slight delay
+            setTimeout(() => {
+              const downloadUrl = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}&sessionId=${sessionId}`;
+              
+              // Use iframe method for better reliability
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.style.width = '0';
+              iframe.style.height = '0';
+              iframe.src = downloadUrl;
+              document.body.appendChild(iframe);
+              
+              // Clean up iframe after download
+              setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                  document.body.removeChild(iframe);
+                }
+              }, 30000); // 30 seconds cleanup
+            }, 1000);
+          }
+
+          // Update progress bar
+          progressBar.style.width = `${progress}%`;
+          progressBar.textContent = `${progress}%`;
+
+          // Update status message
+          switch (status) {
+            case 'connected':
+              statusMessage.textContent = 'Connected - preparing download...';
+              break;
+            case 'preparing':
+              statusMessage.textContent = 'Preparing download...';
+              break;
+            case 'downloading':
+              const downloadedMB = data.downloaded ? (data.downloaded / (1024 * 1024)).toFixed(1) : 0;
+              const totalMB = data.total ? (data.total / (1024 * 1024)).toFixed(1) : 0;
+              statusMessage.textContent = totalMB > 0 ? 
+                `Downloading... ${progress}% (${downloadedMB}/${totalMB} MB)` : 
+                `Downloading... ${progress}%`;
+              break;
+            case 'completed':
+              statusMessage.textContent = 'Download completed!';
+              showSuccess('File downloaded successfully!');
+              dlBtn.disabled = false;
+              setTimeout(() => {
+                loader.style.display = 'none';
+              }, 3000);
+              break;
+            case 'error':
+              statusMessage.textContent = 'Download failed';
+              showError(data.message || 'Download failed. Please try again.');
+              dlBtn.disabled = false;
+              setTimeout(() => {
+                loader.style.display = 'none';
+              }, 3000);
+              break;
+          }
+
+          // Close connection when done
+          if (status === 'completed' || status === 'error') {
+            currentEventSource.close();
+            currentEventSource = null;
+          }
+        } catch (parseError) {
+          console.error('Error parsing progress data:', parseError);
+        }
+      };
+
+      currentEventSource.onerror = (error) => {
+        console.error('EventSource error:', error);
+        statusMessage.textContent = 'Connection error';
+        showError('Connection lost. Please try again.');
+        dlBtn.disabled = false;
+        currentEventSource.close();
+        currentEventSource = null;
+        setTimeout(() => {
+          loader.style.display = 'none';
+        }, 3000);
+      };
+    });
+
+      currentEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const progress = data.progress || 0;
+          const status = data.status || 'downloading';
+
+          // Update progress bar
+          progressBar.style.width = `${progress}%`;
+          progressBar.textContent = `${progress}%`;
+
+          // Update status message
+          switch (status) {
+            case 'connected':
+              statusMessage.textContent = 'Connected - preparing download...';
+              break;
+            case 'preparing':
+              statusMessage.textContent = 'Preparing download...';
+              break;
+            case 'downloading':
+              const downloadedMB = data.downloaded ? (data.downloaded / (1024 * 1024)).toFixed(1) : 0;
+              const totalMB = data.total ? (data.total / (1024 * 1024)).toFixed(1) : 0;
+              statusMessage.textContent = totalMB > 0 ? 
+                `Downloading... ${progress}% (${downloadedMB}/${totalMB} MB)` : 
+                `Downloading... ${progress}%`;
+              break;
+            case 'completed':
+              statusMessage.textContent = 'Download completed!';
+              showSuccess('File downloaded successfully!');
+              dlBtn.disabled = false;
+              setTimeout(() => {
+                loader.style.display = 'none';
+              }, 3000);
+              break;
+            case 'error':
+              statusMessage.textContent = 'Download failed';
+              showError(data.message || 'Download failed. Please try again.');
+              dlBtn.disabled = false;
+              setTimeout(() => {
+                loader.style.display = 'none';
+              }, 3000);
+              break;
+          }
+
+          // Close connection when done
+          if (status === 'completed' || status === 'error') {
+            currentEventSource.close();
+            currentEventSource = null;
+          }
+        } catch (parseError) {
+          console.error('Error parsing progress data:', parseError);
+        }
+      };
+
+      currentEventSource.onerror = (error) => {
+        console.error('EventSource error:', error);
+        statusMessage.textContent = 'Connection error';
+        showError('Connection lost. Please try again.');
+        dlBtn.disabled = false;
+        currentEventSource.close();
+        currentEventSource = null;
+        setTimeout(() => {
+          loader.style.display = 'none';
+        }, 3000);
+      };
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (currentEventSource) {
+        currentEventSource.close();
+      }
+    });
+  </script>
+
+</body>
+</html> -->
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>YouTube Video Downloader</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%);
+      color: white;
+      min-height: 100vh;
+      position: relative;
+      overflow-x: hidden;
+    }
+
+    /* Animated background particles */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .particle {
+      position: absolute;
+      background: rgba(192, 57, 43, 0.1);
+      border-radius: 50%;
+      animation: float 20s infinite linear;
+    }
+
+    @keyframes float {
+      0% {
+        transform: translateY(100vh) rotate(0deg);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+      }
+      90% {
+        opacity: 1;
+      }
+      100% {
+        transform: translateY(-100px) rotate(360deg);
+        opacity: 0;
+      }
+    }
+
+    header {
+      text-align: center;
+      background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+      padding: 3rem 2rem;
+      color: white;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 1;
+    }
+
+    header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="1"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/></svg>');
+      opacity: 0.3;
+    }
+
+    h1 {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+      font-weight: 700;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+      position: relative;
+      z-index: 2;
+    }
+
+    header p {
+      font-size: 1.3rem;
+      opacity: 0.9;
+      position: relative;
+      z-index: 2;
+    }
+
+    .container {
+      width: 90%;
+      max-width: 700px;
+      margin: 3rem auto;
+      padding: 3rem;
+      background: rgba(255, 255, 255, 0.95);
+      backdrop-filter: blur(10px);
+      color: #333;
+      border-radius: 20px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.2);
+      position: relative;
+      z-index: 1;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+    }
+
+    .input-group {
+      position: relative;
+      margin-bottom: 2rem;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 0.5rem;
+      font-weight: 600;
+      color: #555;
+      font-size: 1.1rem;
+    }
+
+    input[type="text"] {
+      width: 100%;
+      padding: 1.2rem 1.5rem;
+      font-size: 1.1rem;
+      border-radius: 12px;
+      border: 2px solid #e1e8ed;
+      background: #f8f9fa;
+      color: #333;
+      transition: all 0.3s ease;
+      font-family: inherit;
+    }
+
+    input[type="text"]:focus {
+      border-color: #c0392b;
+      background: white;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.1);
+      transform: translateY(-2px);
+    }
+
+    input[type="text"]::placeholder {
+      color: #adb5bd;
+    }
+
+    .btn {
+      background: linear-gradient(135deg, #c0392b 0%, #e74c3c 100%);
+      color: white;
+      padding: 1.2rem 2rem;
+      font-size: 1.1rem;
+      font-weight: 600;
+      border: none;
+      border-radius: 12px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      width: 100%;
+      position: relative;
+      overflow: hidden;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      box-shadow: 0 4px 15px rgba(192, 57, 43, 0.3);
+    }
+
+    .btn::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+      transition: left 0.5s;
+    }
+
+    .btn:hover::before {
+      left: 100%;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(192, 57, 43, 0.4);
+    }
+
+    .btn:active {
+      transform: translateY(0);
+    }
+
+    .btn:disabled {
+      background: linear-gradient(135deg, #bdc3c7 0%, #95a5a6 100%);
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: none;
+    }
+
+    .btn:disabled::before {
+      display: none;
+    }
+
+    /* Enhanced Loading Spinner */
+    .loading-container {
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      margin: 2rem 0;
+      padding: 2rem;
+    }
+
+    .spinner-wrapper {
+      position: relative;
+      margin-bottom: 1.5rem;
+    }
+
+    .spinner {
+      width: 60px;
+      height: 60px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #c0392b;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      position: relative;
+    }
+
+    .spinner::before {
+      content: '';
+      position: absolute;
+      top: -4px;
+      left: -4px;
+      right: -4px;
+      bottom: -4px;
+      border: 2px solid transparent;
+      border-top: 2px solid #e74c3c;
+      border-radius: 50%;
+      animation: spin 2s linear infinite reverse;
+    }
+
+    .pulse-ring {
+      position: absolute;
+      top: -10px;
+      left: -10px;
+      right: -10px;
+      bottom: -10px;
+      border: 2px solid rgba(192, 57, 43, 0.3);
+      border-radius: 50%;
+      animation: pulse 2s ease-in-out infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0% {
+        transform: scale(1);
+        opacity: 1;
+      }
+      50% {
+        transform: scale(1.1);
+        opacity: 0.5;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
+    }
+
+    .loading-text {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #c0392b;
+      text-align: center;
+      animation: fadeInOut 2s ease-in-out infinite;
+    }
+
+    @keyframes fadeInOut {
+      0%, 100% { opacity: 0.7; }
+      50% { opacity: 1; }
+    }
+
+    /* Format Selection */
+    #chooser {
+      display: none;
+      margin-top: 2rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+      border-radius: 15px;
+      border: 2px solid #dee2e6;
+    }
+
+    #chooser label {
+      display: block;
+      margin-bottom: 1rem;
+      font-weight: 600;
+      color: #495057;
+      font-size: 1.2rem;
+    }
+
+    select {
+      width: 100%;
+      padding: 1.2rem;
+      font-size: 1.1rem;
+      border-radius: 10px;
+      border: 2px solid #ced4da;
+      background: white;
+      color: #333;
+      margin-bottom: 1.5rem;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    select:focus {
+      border-color: #c0392b;
+      outline: none;
+      box-shadow: 0 0 0 3px rgba(192, 57, 43, 0.1);
+    }
+
+    /* Download Progress */
+    #download-loader {
+      display: none;
+      margin-top: 2rem;
+      padding: 2rem;
+      background: linear-gradient(135deg, #fff 0%, #f8f9fa 100%);
+      border-radius: 15px;
+      border: 2px solid #e9ecef;
+    }
+
+    #download-loader p {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      text-align: center;
+      font-weight: 600;
+      color: #495057;
+    }
+
+    .progress-container {
+      background: #e9ecef;
+      border-radius: 50px;
+      overflow: hidden;
+      margin: 1.5rem 0;
+      box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1);
+      height: 35px;
+      position: relative;
+    }
+
+    #progress-bar {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #c0392b 0%, #e74c3c 50%, #c0392b 100%);
+      background-size: 200% 100%;
+      animation: gradientShift 2s ease-in-out infinite;
+      transition: width 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-weight: bold;
+      font-size: 1rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #progress-bar::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+      animation: shine 2s infinite;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    @keyframes shine {
+      0% { left: -100%; }
+      100% { left: 100%; }
+    }
+
+    #status-message {
+      font-size: 1rem;
+      text-align: center;
+      color: #6c757d;
+      margin-top: 1rem;
+    }
+
+    /* Message Styles */
+    .message {
+      padding: 1rem 1.5rem;
+      border-radius: 10px;
+      margin-top: 1.5rem;
+      font-weight: 500;
+      animation: slideIn 0.3s ease-out;
+    }
+
+    @keyframes slideIn {
+      from {
+        opacity: 0;
+        transform: translateY(-10px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .error {
+      background: linear-gradient(135deg, #f8d7da 0%, #f5c6cb 100%);
+      color: #721c24;
+      border: 1px solid #f1b0b7;
+    }
+
+    .success {
+      background: linear-gradient(135deg, #d1edce 0%, #c3e6cb 100%);
+      color: #155724;
+      border: 1px solid #b8daff;
+    }
+
+    /* Responsive Design */
+    @media (max-width: 768px) {
+      h1 {
+        font-size: 2rem;
+      }
+      
+      header p {
+        font-size: 1.1rem;
+      }
+      
+      .container {
+        margin: 2rem auto;
+        padding: 2rem;
+        width: 95%;
+      }
+      
+      .spinner {
+        width: 50px;
+        height: 50px;
+      }
+    }
+
+    /* Video icon animation in header */
+    .video-icon {
+      display: inline-block;
+      margin-right: 1rem;
+      animation: bounce 2s infinite;
+    }
+
+    @keyframes bounce {
+      0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0);
+      }
+      40% {
+        transform: translateY(-10px);
+      }
+      60% {
+        transform: translateY(-5px);
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- Animated background -->
+  <div class="bg-animation" id="bgAnimation"></div>
+
+  <header>
+    <h1><span class="video-icon">📹</span>YouTube Video Downloader</h1>
+    <p>Enter a YouTube link, pick quality, and download in style!</p>
+  </header>
+
+  <div class="container">
+    <div class="input-group">
+      <label for="url">YouTube URL</label>
+      <input id="url" type="text" placeholder="https://www.youtube.com/watch?v=..." />
+    </div>
+    
+    <button id="fetch" class="btn">
+      <span id="fetch-text">Fetch Formats</span>
+    </button>
+
+    <!-- Enhanced Loading Container -->
+    <div class="loading-container" id="loading-container">
+      <div class="spinner-wrapper">
+        <div class="pulse-ring"></div>
+        <div class="spinner"></div>
+      </div>
+      <div class="loading-text" id="loading-text">Analyzing video formats...</div>
+    </div>
+
+    <div id="chooser">
+      <label for="formats">Choose your preferred format:</label>
+      <select id="formats"></select>
+      <button id="dl" class="btn">Start Download</button>
+    </div>
+
+    <div id="download-loader">
+      <p>Status: <span id="status-message">Preparing download...</span></p>
+      <div class="progress-container">
+        <div id="progress-bar">0%</div>
+      </div>
+    </div>
+
+    <div class="error message" id="error" style="display: none;"></div>
+    <div class="success message" id="success" style="display: none;"></div>
+  </div>
+
+  <script>
+    // Create animated background particles
+    function createParticles() {
+      const bgAnimation = document.getElementById('bgAnimation');
+      for (let i = 0; i < 15; i++) {
+        const particle = document.createElement('div');
+        particle.className = 'particle';
+        particle.style.left = Math.random() * 100 + '%';
+        particle.style.width = particle.style.height = (Math.random() * 10 + 5) + 'px';
+        particle.style.animationDelay = Math.random() * 20 + 's';
+        particle.style.animationDuration = (Math.random() * 10 + 15) + 's';
+        bgAnimation.appendChild(particle);
+      }
+    }
+    createParticles();
+
+    const fetchBtn = document.getElementById('fetch');
+    const fetchText = document.getElementById('fetch-text');
+    const loadingContainer = document.getElementById('loading-container');
+    const loadingText = document.getElementById('loading-text');
+    const chooser = document.getElementById('chooser');
+    const formatsSel = document.getElementById('formats');
+    const errorDiv = document.getElementById('error');
+    const successDiv = document.getElementById('success');
+    const loader = document.getElementById('download-loader');
+    const statusMessage = document.getElementById('status-message');
+    const progressBar = document.getElementById('progress-bar');
+    const dlBtn = document.getElementById('dl');
+    let currentURL = '';
+    let currentEventSource = null;
+
+    // Loading text variations
+    const loadingTexts = [
+      'Analyzing video formats...',
+      'Connecting to YouTube...',
+      'Fetching available qualities...',
+      'Processing video data...',
+      'Almost ready...'
+    ];
+    let loadingTextIndex = 0;
+
+    function updateLoadingText() {
+      if (loadingContainer.style.display === 'flex') {
+        loadingText.textContent = loadingTexts[loadingTextIndex];
+        loadingTextIndex = (loadingTextIndex + 1) % loadingTexts.length;
+      }
+    }
+
+    let loadingTextInterval;
+
+    // Helper functions
+    function clearMessages() {
+      errorDiv.style.display = 'none';
+      successDiv.style.display = 'none';
+      errorDiv.textContent = '';
+      successDiv.textContent = '';
+    }
+
+    function showError(message) {
+      errorDiv.textContent = message;
+      errorDiv.style.display = 'block';
+      successDiv.style.display = 'none';
+    }
+
+    function showSuccess(message) {
+      successDiv.textContent = message;
+      successDiv.style.display = 'block';
+      errorDiv.style.display = 'none';
+    }
+
+    function showLoading() {
+      loadingContainer.style.display = 'flex';
+      fetchBtn.disabled = true;
+      fetchText.textContent = 'Please Wait...';
+      loadingTextIndex = 0;
+      loadingTextInterval = setInterval(updateLoadingText, 1500);
+    }
+
+    function hideLoading() {
+      loadingContainer.style.display = 'none';
+      fetchBtn.disabled = false;
+      fetchText.textContent = 'Fetch Formats';
+      clearInterval(loadingTextInterval);
+    }
+
+    fetchBtn.addEventListener('click', async () => {
+      const url = document.getElementById('url').value.trim();
+      if (!url) {
+        showError('Please enter a YouTube URL');
+        return;
+      }
+      
+      clearMessages();
+      showLoading();
+      chooser.style.display = 'none';
+      loader.style.display = 'none';
+      formatsSel.innerHTML = '';
+
+      try {
+        const res = await fetch(`/api/formats?url=${encodeURIComponent(url)}`);
+        const data = await res.json();
+        hideLoading();
+
+        if (data.error) {
+          return showError(data.error);
+        }
+        
+        currentURL = url;
+
+        data.formats.forEach(fmt => {
+          const opt = document.createElement('option');
+          opt.value = fmt.itag;
+          const container = fmt.container ? ` / ${fmt.container}` : '';
+          opt.textContent = `${fmt.label}${container} (${fmt.size})`;
+          formatsSel.appendChild(opt);
+        });
+
+        chooser.style.display = 'block';
+        showSuccess(`Found ${data.formats.length} available formats for: ${data.title}`);
+      } catch (err) {
+        hideLoading();
+        console.error('Fetch error:', err);
+        showError('Error fetching formats. Please check your connection and try again.');
+      }
+    });
+
+    dlBtn.addEventListener('click', () => {
+      const itag = formatsSel.value;
+      if (!itag || !currentURL) {
+        showError('Please select a format first');
+        return;
+      }
+
+      // Generate unique session ID
+      const sessionId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+      
+      // Reset UI
+      clearMessages();
+      loader.style.display = 'block';
+      dlBtn.disabled = true;
+      statusMessage.textContent = 'Connecting...';
+      progressBar.style.width = '0%';
+      progressBar.textContent = '0%';
+
+      // Close any existing event source
+      if (currentEventSource) {
+        currentEventSource.close();
+      }
+
+      // Start progress tracking first
+      currentEventSource = new EventSource(`/api/progress/${sessionId}`);
+      
+      let downloadStarted = false;
+      
+      currentEventSource.onopen = () => {
+        statusMessage.textContent = 'Connected - preparing download...';
+      };
+
+      currentEventSource.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          const progress = data.progress || 0;
+          const status = data.status || 'downloading';
+
+          // Start download when we get the first connected message
+          if (!downloadStarted && (status === 'connected' || status === 'preparing')) {
+            downloadStarted = true;
+            statusMessage.textContent = 'Initiating download...';
+            
+            // Start the actual download with a slight delay
+            setTimeout(() => {
+              const downloadUrl = `/api/download?url=${encodeURIComponent(currentURL)}&itag=${itag}&sessionId=${sessionId}`;
+              
+              // Use iframe method for better reliability
+              const iframe = document.createElement('iframe');
+              iframe.style.display = 'none';
+              iframe.style.width = '0';
+              iframe.style.height = '0';
+              iframe.src = downloadUrl;
+              document.body.appendChild(iframe);
+              
+              // Clean up iframe after download
+              setTimeout(() => {
+                if (document.body.contains(iframe)) {
+                  document.body.removeChild(iframe);
+                }
+              }, 30000);
+            }, 1000);
+          }
+
+          // Update progress bar
+          progressBar.style.width = `${progress}%`;
+          progressBar.textContent = `${progress}%`;
+
+          // Update status message
+          switch (status) {
+            case 'connected':
+              statusMessage.textContent = 'Connected - preparing download...';
+              break;
+            case 'preparing':
+              statusMessage.textContent = 'Preparing download...';
+              break;
+            case 'downloading':
+              const downloadedMB = data.downloaded ? (data.downloaded / (1024 * 1024)).toFixed(1) : 0;
+              const totalMB = data.total ? (data.total / (1024 * 1024)).toFixed(1) : 0;
+              statusMessage.textContent = totalMB > 0 ? 
+                `Downloading... ${progress}% (${downloadedMB}/${totalMB} MB)` : 
+                `Downloading... ${progress}%`;
+              break;
+            case 'completed':
+              statusMessage.textContent = 'Download completed! 🎉';
+              showSuccess('File downloaded successfully!');
+              dlBtn.disabled = false;
+              setTimeout(() => {
+                loader.style.display = 'none';
+              }, 3000);
+              break;
+            case 'error':
+              statusMessage.textContent = 'Download failed ❌';
+              showError(data.message || 'Download failed. Please try again.');
+              dlBtn.disabled = false;
+              setTimeout(() => {
+                loader.style.display = 'none';
+              }, 3000);
+              break;
+          }
+
+          // Close connection when done
+          if (status === 'completed' || status === 'error') {
+            currentEventSource.close();
+            currentEventSource = null;
+          }
+        } catch (parseError) {
+          console.error('Error parsing progress data:', parseError);
+        }
+      };
+
+      currentEventSource.onerror = (error) => {
+        console.error('EventSource error:', error);
+        statusMessage.textContent = 'Connection error ⚠️';
+        showError('Connection lost. Please try again.');
+        dlBtn.disabled = false;
+        currentEventSource.close();
+        currentEventSource = null;
+        setTimeout(() => {
+          loader.style.display = 'none';
+        }, 3000);
+      };
+    });
+
+    // Cleanup on page unload
+    window.addEventListener('beforeunload', () => {
+      if (currentEventSource) {
+        currentEventSource.close();
+      }
+    });
+
+    // Add some interactive effects
+    document.querySelectorAll('.btn').forEach(btn => {
+      btn.addEventListener('mouseenter', function() {
+        this.style.transform = 'translateY(-2px) scale(1.02)';
+      });
+      
+      btn.addEventListener('mouseleave', function() {
+        if (!this.disabled) {
+          this.style.transform = 'translateY(0) scale(1)';
+        }
+      });
+    });
+
+    // Enhanced input focus effects
+    document.getElementById('url').addEventListener('focus', function() {
+      this.parentElement.style.transform = 'scale(1.02)';
+    });
+
+    document.getElementById('url').addEventListener('blur', function() {
+      this.parentElement.style.transform = 'scale(1)';
     });
   </script>
 </body>
